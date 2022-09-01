@@ -1,0 +1,1 @@
+You should come up with the JSON structure on you own and describe it in the README.md file for your repository or in a separate documentation file.
