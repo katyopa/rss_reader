@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 import pathlib
-import version
+from rss_reader import version
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.txt").read_text(encoding="utf-8")
 
@@ -13,11 +13,11 @@ setup(name='rss_reader',
                   "console_scripts": [
                   "rss_reader = rss_reader.main:main", # название для консоли, после двоеточия - название ф-ции (main)
         ]
-      }
-
+      },
       install_requires = [
                          "bs4 == 0.0.1",
                          "requests == 2.28.1",
                          "lxml == 4.9.1",
-                         "tld == 0.12.5",             # СДЕЛАТЬ, чтобы устанавливало автоматически нужные пакеты!!!!!
+                         "pickledb == 0.9.2"             # чтобы устанавливало автоматически нужные пакеты
                    ]
+      )
