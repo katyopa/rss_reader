@@ -1,37 +1,3 @@
-# https://stackoverflow.com/questions/55936200/how-to-build-a-simple-rss-reader-in-python-3-7
-# https://www.jcchouinard.com/read-rss-feed-with-python/
-
-# how to add option without any argument (--json)
-# https://intellipaat.com/community/4618/argparse-module-how-to-add-option-without-any-argument
-
-# logging:
-# https://khashtamov.com/ru/python-logging/
-
-# https://www.crummy.com/software/BeautifulSoup/bs4/doc/#attrs
-
-# format pubDate of rss feed:
-# https://stackoverflow.com/questions/12270531/how-to-format-pubdate-with-python
-# https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
-
-# covert json string to a HTML table representation
-# https://pypi.org/project/json2html/  - from json2html.jsonconv import json2html - important!
-
-# convert html to pdf
-# https://stackoverflow.com/questions/23359083/how-to-convert-webpage-into-pdf-by-using-python
-
-# write file to a specific directory
-# https://stackoverflow.com/questions/8024248/telling-python-to-save-a-txt-file-to-a-certain-directory-on-windows-and-mac
-
-
-# parse RSS
-
-# python -m pip install bs4  !!!
-# python -m pip install requests  !!!
-# python - m pip install lxml    !!!  чтобы нормально парсился xml
-# python install pickledb
-
-# python -m pip install --upgrade pip setuptools wheel
-
 from bs4 import BeautifulSoup
 import requests
 import argparse
@@ -39,9 +5,7 @@ import json
 import logging
 import sys
 from logging import StreamHandler, Formatter
-
 from json2html import json2html
-import rss_reader.version as ver # - для пакета import version as ver   ODO
 import pickledb
 import time
 import feedparser
@@ -50,6 +14,10 @@ from json2html.jsonconv import json2html  # вот здесь правильны
 from datetime import datetime
 import pdfkit
 
+try:
+    import rss_reader.version as ver   # - to start as package `rss_reader`
+except:
+    import version as ver   # - to start as `python rss_reader\rss_reader.py`
 
 
 logger = logging.getLogger(__name__)
@@ -59,11 +27,15 @@ handler.setFormatter(Formatter(fmt='[%(asctime)s: %(levelname)s] %(message)s'))
 
 
 def init_db():
-    if not os.path.exists('rss.db'):
-        with open('rss.db', 'w') as f:
-            f.write('{}')
+    my_db = 'rss_reader/rss.db'
+    try:
+        if not os.path.exists('rss_reader/rss.db'):
+            with open('rss_reader/rss.db', 'w') as f:
+                f.write('{}')
 
-    rss_db = pickledb.load('rss.db', False)
+        rss_db = pickledb.load(my_db, False)
+    except Exception as e:
+        raise Exception('Could not load database.')
     return rss_db
 
 
@@ -93,7 +65,6 @@ def read_rss(rss_url):
     Parses the XML with BeautifulSoup;
     Creates a list of dictionaries with article data: title, image, link, date;
     Fetches feed title
-
     :param rss_url: RSS url for reading
     :return: feed_title - title of the rss feed, articles_dicts - list of dictionaries with article data
     """
@@ -118,19 +89,17 @@ def read_rss(rss_url):
             }
             for a in articles
         ]
-
         feed_title = soup.find('channel').title.text
+
         return feed_title, articles_dicts
+
     except Exception as e:
         raise Exception('Could not parse the xml: %s' % rss_url)  # %s - placeholder для строки для еррора
 
 
 def get_articles(articles_limit=float('inf')):
-
-    #TODO errors: not integer.
     """
     Gets results of rss parsing
-
     :param articles_limit: if not specified, then user gets _all_ available feed;
     if larger than feed size then user gets _all_ available news.
     :return: articles_list - list of dictionaries with articles
@@ -138,7 +107,8 @@ def get_articles(articles_limit=float('inf')):
 
     args = parse_rss_reader_args()
     feed, articles = read_rss(args.source)
-    logger.debug("Processing result...\n")
+    logger.debug("Processing result...")
+    logger.debug(f"Database is updated.\n")
     if articles_limit >= 1:
         print(f'\nFeed: {feed}\n')
         articles_list = []
@@ -152,19 +122,30 @@ def get_articles(articles_limit=float('inf')):
                 if 'image' in article and article['image']:
                     articles_dict['Image'] = article["image"]["url"]
 
-                print(articles_dict)                # DELETE ME TODO
                 articles_list.append(articles_dict)
 
-                date_in_db = time.strftime('%Y%m%d', feedparser.datetimes._parse_date(article["date"]))
-                if not db.exists(date_in_db):
-                    add_to_db(db, date_in_db, articles_dict)
-                else:
-                    update_db(db, date_in_db, articles_dict)
+                date = time.strftime('%Y%m%d', feedparser.datetimes._parse_date(article["date"]))
+                add_or_update_db(date_in_db=date, art_to_db=articles_dict)
+
             else:
                 break
     else:
         raise Exception("Sorry, no numbers below one")
+
     return articles_list
+
+
+def add_or_update_db(date_in_db, art_to_db):
+    """
+    Calls add_to_db or update_db
+    :param date_in_db: date in '%Y%m%d' format;
+    :param art_to_db: dictionary with article
+    """
+
+    if not db.exists(date_in_db):
+        add_to_db(db, date_in_db, art_to_db)
+    else:
+        update_db(db, date_in_db, art_to_db)
 
 
 def print_articles(articles_list):
@@ -176,16 +157,15 @@ def print_articles(articles_list):
         print(
             f'Title: {article["Title"]}\n'
             f'Date: {article["Date"]}\n'
-            f'Link: {article["Link"]}\n------------------------\n'
+            f'Link: {article["Link"]}'
             )
         if 'Image' in article:
-            print(f'Image: {article["Image"]}\n')
+            print(f'Image: {article["Image"]}\n------------------------\n'),
 
 
 def add_to_db(database, date, article):
     """
     Adds article for the specific date to the local database
-
     :param database: local database where the articles for the specific dates are being stored
     :param date: a date in `%Y%m%d` format - actual publishing date
     :param article: dictionary with article data to be added
@@ -197,7 +177,6 @@ def add_to_db(database, date, article):
 def update_db(database, date, article):
     """
     Updates the list with articles for the specific date in the local database
-
     :param database: local database where the articles for the specific dates are being stored
     :param date: a date in `%Y%m%d` format - actual publishing date
     :param article: dictionary with article data
@@ -212,7 +191,6 @@ def update_db(database, date, article):
 def print_from_db(database, date, articles_limit=float('inf')):
     """
     In case of using `--date` argument prints the news from the database for the specific date in console
-
     :param database: local database where the articles for the specific dates are being stored
     :param date: a date in `%Y%m%d` format - actual publishing date
     :param articles_limit: if not specified, then user gets _all_ available articles from database for the specific date;
@@ -231,6 +209,7 @@ def print_from_db(database, date, articles_limit=float('inf')):
                     break
         else:
             logger.error("Sorry, no numbers below one")
+
         return limited_articles_list
 
     except Exception as e:
@@ -240,13 +219,11 @@ def print_from_db(database, date, articles_limit=float('inf')):
 def create_json(articles_list):
     """
     In case of using `--json` argument the utility converts the news into JSON format
-
     :param articles_list: list of dictionaries with articles to be converted into JSON format
     :return articles_json: JSON string with articles
     """
-    print(articles_list)   # DELETE ME TODO
-    articles_json = json.dumps(articles_list, ensure_ascii=False, indent=2) # ensure_ascii делает кодировку нормальной
-    print(type(articles_json))     # DELETE ME TODO
+    articles_json = json.dumps(articles_list, ensure_ascii=False, indent=2)   # ensure_ascii делает кодировку нормальной
+
     return articles_json
 
 
@@ -268,7 +245,21 @@ def convert_to_html(articles):
     json_articles = create_json(articles)
     logger.debug(f"Converting the news to HTML format...")
     html_output = json2html.convert(json=json_articles)
+
     return html_output
+
+
+def create_file_name(extension):
+    """
+    Creates file name based on the current date and time
+    :param extension: file extension
+    :return file_name: file name
+    """
+    now = datetime.now()
+    dt_string = now.strftime("%d-%m-%Y__%H-%M-%S")
+    file_name = f'{dt_string}.{extension}'
+
+    return file_name
 
 
 def convert_to_pdf(articles, path):
@@ -277,10 +268,7 @@ def convert_to_pdf(articles, path):
     :param articles: HTML string with articles to be converted into PDF format and printed in stdout
     :param path: absolute path where news file will be saved
     """
-    now = datetime.now()
-    dt_string = now.strftime("%d-%m-%Y__%H-%M-%S")
-    file_name = f'{dt_string}.pdf'
-
+    file_name = create_file_name("pdf")
     options = {
         'page-size': 'A4',
         'orientation': 'Landscape',
@@ -295,24 +283,22 @@ def convert_to_pdf(articles, path):
     html_articles = convert_to_html(articles)
     if os.path.exists(f'{path}'):
         pdfkit.from_string(f'{html_articles}', (os.path.join(f'{path}', f'{file_name}')), options=options)
-        logger.debug(f"{dt_string}.pdf successfully created.")
+        logger.debug(f"{file_name} successfully created.")
     else:
         logger.error("Sorry, path doesn't exist.")
 
 
-def write_to_file(content, path):  # сделать для всех форматов
+def write_to_file(content, path):
     """
-    Writes the news in a given format to a file TODO
+    Writes the news in a given format to a file
     :param content: HTML Table representation of the news
     :param path: absolute path where news file will be saved
     """
-    now = datetime.now()
-    dt_string = now.strftime("%d-%m-%Y__%H-%M-%S")
-    file_name = f'{dt_string}.html'
+    file_name = create_file_name("html")
     if os.path.exists(f'{path}'):
         with open(os.path.join(f'{path}', f'{file_name}'), "w") as f:
             f.write(f'{content}')
-            logger.debug(f"{dt_string}.html successfully created.")
+            logger.debug(f"{file_name} successfully created.")
     else:
         logger.error("Sorry, path doesn't exist.")
 
@@ -324,7 +310,7 @@ def print_version():
     print(ver.__version__)
 
 
-def main():   ## NEW VERSION
+def main():
 
     args = parse_rss_reader_args()
     if args.verbose:
@@ -332,113 +318,41 @@ def main():   ## NEW VERSION
     else:
         logger.setLevel(logging.INFO)
 
-    #try:
-    if args.source:
-        if args.limit:
-            articles = get_articles(articles_limit=args.limit)
-        else:
-            articles = get_articles(articles_limit=float('inf'))
-        print_articles(articles)
-    else:
-        if args.date:
+    try:
+        if args.source:
             if args.limit:
-                articles = print_from_db(db, args.date, articles_limit=args.limit)
+                articles = get_articles(articles_limit=args.limit)
             else:
-                articles = print_from_db(db, args.date, articles_limit=float('inf'))
+                articles = get_articles(articles_limit=float('inf'))
             print_articles(articles)
-        elif args.version:
-            print_version()
         else:
-            raise Exception("Enter some URL.")
+            if args.date:
+                if args.limit:
+                    articles = print_from_db(db, args.date, articles_limit=args.limit)
+                else:
+                    articles = print_from_db(db, args.date, articles_limit=float('inf'))
+                print_articles(articles)
+            elif args.version:
+                print_version()
+            else:
+                raise Exception("Enter some URL.")
 
-    if args.json:
-        json_articles = create_json(articles)
-        print_json(json_articles)
+        if args.json:
+            json_articles = create_json(articles)
+            print_json(json_articles)
 
-    if args.to_html:
-        html_news = convert_to_html(articles)
-        write_to_file(html_news, args.to_html)
+        if args.to_html:
+            html_news = convert_to_html(articles)
+            write_to_file(html_news, args.to_html)
 
-    if args.to_pdf:
-        convert_to_pdf(articles, args.to_pdf)
+        if args.to_pdf:
+            convert_to_pdf(articles, args.to_pdf)
 
+    except Exception as e:
+        logger.error(e)
 
-# def main():   ## OLD VERSION
-#
-#     args = parse_rss_reader_args()
-#     #try:
-#     if args.source:
-#         if args.verbose:
-#             logger.setLevel(logging.DEBUG)
-#         else:
-#             logger.setLevel(logging.INFO)
-#
-#         if args.limit:
-#             articles = get_articles(args.limit)
-#         else:
-#             articles = get_articles()
-#         print_articles(articles)
-#
-#         if args.json:
-#             json_articles = create_json(articles)
-#             print_json(json_articles)
-#
-#         if args.to_html:
-#             html_news = convert_to_html(articles)
-#             write_to_file(html_news, args.to_html)
-#
-#         if args.to_pdf:
-#             convert_to_pdf(articles, args.to_pdf)
-#
-#     else:
-#         if args.date:
-#             if args.limit:
-#                 specific_date_articles = print_from_db(db, args.date, args.limit)
-#             else:
-#                 specific_date_articles = print_from_db(db, args.date)
-#             print_articles(specific_date_articles)
-#
-#             if args.json:
-#                 json_articles = create_json(specific_date_articles)
-#                 print_json(json_articles)
-#
-#             if args.to_html:
-#                 json_articles = create_json(specific_date_articles)
-#                 converted_news = convert_to_html(json_articles)
-#                 write_to_file(converted_news, args.to_html)
-#
-#             if args.to_pdf:
-#                 convert_to_pdf(specific_date_articles, args.to_pdf)
-#
-#         elif args.version:
-#             print_version()
-#         else:
-#             raise Exception("Enter some URL.")
-#     # except Exception as e:
-#     #     logger.error(e)
-    #
     logger.debug("Exiting the program.")
 
 
 if __name__ == "__main__":
     main()
-
-
-# TODO ERROR] 'NoneType' object is not subscriptable- -  python rss_reader.py 'https://news.yahoo.com/rss/' --limit 35 --json --verbose
-# 'image': None,
-# <item>
-# <title>Russia `alarmed' at no US visas to attend UN leaders meeting</title>
-# <link>https://news.yahoo.com/russia-alarmed-no-us-visas-033903929.html</link>
-# <pubDate>2022-09-03T03:39:03Z</pubDate>
-# <source url="http://www.ap.org/">Associated Press</source>
-# <guid isPermaLink="false">russia-alarmed-no-us-visas-033903929.html</guid>
-# <media:credit role="publishing company"/>
-# </item>
-
-# test_url = 'https://news.yahoo.com/rss/'
-# test_url = 'https://realpython.com/atom.xml' # Error     feed = soup.find('channel').title.text
-# AttributeError: 'NoneType' object has no attribute 'title'
-
-# test_url = 'https://practicaldatascience.co.uk/feed.xml'
-# test_url = 'https://waylonwalker.com/rss.xml'
-# test_url = 'https://www.jcchouinard.com/author/jean-christophe-chouinard/feed/'

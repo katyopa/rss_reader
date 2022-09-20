@@ -91,6 +91,12 @@ RSS reader is a command-line utility which receives [RSS](wikipedia.org/wiki/RSS
    ```sh
    pip install
    ```
+3. You also need to install `wkhtmltopdf` from [link](https://wkhtmltopdf.org/downloads.html) 
+and add `C:\Program Files\wkhtmltopdf\bin` to the PATH environment variable.
+
+
+
+   
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -107,20 +113,23 @@ Example of how a project can be used.
 Utility provides the following interface:
 
 ```shell
-usage: rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] [--date DATE] [source]
+usage: rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] [--date DATE] [--to_html TO_HTML] [--to_pdf TO_PDF] [source]
 
 This utility reads RSS feed & outputs to console
 
 positional arguments:
-  source         RSS URL
+  source             RSS URL
 
 options:
-  -h, --help     show this help message and exit
-  --version      print version info
-  --json         print result as JSON in stdout
-  --verbose      output verbose status messages in stdout
-  --limit LIMIT  limit news topics if this parameter provided
-  --date DATE    print out the news from the specified day
+  -h, --help         show this help message and exit
+  --version          print version info
+  --json             print result as JSON in stdout
+  --verbose          output verbose status messages in stdout
+  --limit LIMIT      limit news topics if this parameter provided
+  --date DATE        print out the news from the specified day
+  --to_html TO_HTML  convert news to html format
+  --to_pdf TO_PDF    convert news to pdf format
+
 
 ```
 
@@ -333,17 +342,23 @@ Link: https://news.yahoo.com/woman-whose-rape-dna-led-205822755.html
 ```
 
 
+###Running tests
+
+```
+rss_reader_util> python -m unittest
+```
+
 
 
 
 ###Known issues:
+to be added
 
 
 
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 Don't forget to give the project a star! Thanks again!

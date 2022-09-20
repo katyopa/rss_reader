@@ -14,14 +14,15 @@ setup(name='rss_reader',
                   "rss_reader = rss_reader.rss_reader:main", #название для консоли,после двоеточия название ф-ции (main)
         ]
       },
-      install_requires=[
+      install_requires=[                                    # чтобы устанавливало автоматически нужные пакеты
                          "bs4 == 0.0.1",
                          "requests == 2.28.1",
-                         "lxml == 4.9.1",
-                         "pickledb == 0.9.2",             # чтобы устанавливало автоматически нужные пакеты
+                         "lxml == 4.9.1",    # чтобы нормально парсился xml
+                         "pickledb == 0.9.2",
                          "json2html == 1.3.0",
                          "pdfkit == 1.0.0",
-                         "wkhtmltopdf == 0.2"   # проверить, надо ли
+                         "wkhtmltopdf == 0.2",
+                         "PyPDF2 == 2.10.8"   # для тестов
 
-                   ]
+      ]
       )
